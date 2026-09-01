@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Training System</title>
+  <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+  <style>
+    :root { font-family: Inter, system-ui, sans-serif; background:#0f1115; color:#fff; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#0f1115; }
+    main { max-width:760px; margin:auto; padding:24px 16px 60px; }
+    .eyebrow { font-size:12px; letter-spacing:.14em; opacity:.6; }
+    h1 { margin:8px 0; font-size:34px; }
+    p { color:#b7bdc8; line-height:1.45; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:22px 0; }
+    .goal { border:1px solid #303642; background:#171b22; color:#fff; padding:15px; border-radius:16px; text-align:left; }
+    .goal strong,.goal span { display:block; }
+    .goal span { margin-top:5px; color:#9da6b3; font-size:12px; }
+    .goal.selected { border-color:#fff; }
+    .panel,.result { background:#171b22; border:1px solid #272d37; border-radius:20px; padding:16px; }
+    label { display:block; margin:14px 0; color:#d9dde4; }
+    select,input[type=range] { width:100%; margin-top:8px; }
+    select { padding:12px; border-radius:12px; background:#0f1115; color:#fff; border:1px solid #343b48; }
+    .primary { width:100%; padding:15px; margin-top:8px; border:0; border-radius:14px; font-weight:700; }
+    .result { margin-top:16px; }
+    .resultHeader,.block { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .block { padding:13px 0; border-top:1px solid #2a303a; }
+    .block small { display:block; color:#9da6b3; margin-top:3px; }
+    .warning { background:#262015; padding:12px; border-radius:12px; }
+    @media(max-width:520px){ .grid{grid-template-columns:1fr;} h1{font-size:30px;} }
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">TRAINING SYSTEM</div>
+  <h1>Какая у вас цель?</h1>
+  <p>Приложение соберёт основу программы под спорт, уровень и доступное время.</p>
+  <section id="goals" class="grid"></section>
+  <section class="panel">
+    <label>Уровень
+      <select id="level">
+        <option value="beginner">Начинающий</option>
+        <option value="intermediate" selected>Средний</option>
+        <option value="advanced">Продвинутый</option>
+        <option value="competitive">Соревновательный</option>
+      </select>
+    </label>
+    <label>Дней в неделю <b id="daysVal">5</b>
+      <input id="days" type="range" min="2" max="7" value="5" />
+    </label>
+    <label>Часов в неделю <b id="hoursVal">8</b>
+      <input id="hours" type="range" min="2" max="20" value="8" />
+    </label>
+    <label id="weeksWrap">Недель до старта <b id="weeksVal">24</b>
+      <input id="weeks" type="range" min="1" max="52" value="24" />
+    </label>
+    <button id="generate" class="primary">Собрать программу</button>
+  </section>
+  <section id="result" class="result" style="display:none"></section>
+</main>
+<script>
+  const goals = [
+    ['ironman','Ironman 140.6','Длинная дистанция'],
+    ['half_ironman','Ironman 70.3','Половинная дистанция'],
+    ['olympic','Олимпийка','1.5 / 40 / 10 км'],
+    ['sprint','Спринт','Быстрая триатлонная подготовка'],
+    ['crossfit','CrossFit','Functional Fitness'],
+    ['fat_loss','Похудение','Снижение жировой массы'],
+    ['muscle_gain','Набор мышц','Гипертрофия + сила']
+  ];
+  let goal='ironman';
+  const goalsEl=document.getElementById('goals');
+  function renderGoals(){
+    goalsEl.innerHTML=goals.map(g=>`<button class="goal ${goal===g[0]?'selected':''}" data-goal="${g[0]}"><strong>${g[1]}</strong><span>${g[2]}</span></button>`).join('');
+    goalsEl.querySelectorAll('button').forEach(b=>b.onclick=()=>{goal=b.dataset.goal; renderGoals(); updateWeeks();});
+  }
+  function updateWeeks(){ document.getElementById('weeksWrap').style.display=['ironman','half_ironman','olympic','sprint','crossfit'].includes(goal)?'block':'none'; }
+  ['days','hours','weeks'].forEach(id=>document.getElementById(id).oninput=e=>document.getElementById(id+'Val').textContent=e.target.value);
+  document.getElementById('generate').onclick=async()=>{
+    const btn=document.getElementById('generate'); btn.textContent='Собираю…';
+    try{
+      const payload={goal,level:document.getElementById('level').value,days_per_week:+days.value,hours_per_week:+hours.value,weeks_to_event:['ironman','half_ironman','olympic','sprint','crossfit'].includes(goal)?+weeks.value:null};
+      const res=await fetch('/plans/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const p=await res.json();
+      const r=document.getElementById('result'); r.style.display='block';
+      r.innerHTML=`<div class="resultHeader"><h2>Структура недели</h2><span>${p.phase}</span></div>`+p.blocks.map(b=>`<div class="block"><div><strong>${b.name}</strong><small>${b.note}</small></div><b>${b.sessions}×</b></div>`).join('')+(p.warning?`<p class="warning">${p.warning}</p>`:'');
+    }finally{btn.textContent='Собрать программу';}
+  };
+  renderGoals(); updateWeeks();
+  window.Telegram?.WebApp?.ready?.(); window.Telegram?.WebApp?.expand?.();
+</script>
+</body>
+</html>
