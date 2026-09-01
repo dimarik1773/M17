@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>M17 Training</title>
+  <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+  <style>
+    :root { font-family: Inter, system-ui, sans-serif; background:#0f1115; color:#fff; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#0f1115; }
+    main { max-width:820px; margin:auto; padding:24px 16px 70px; }
+    .eyebrow { font-size:12px; letter-spacing:.14em; opacity:.6; }
+    h1 { margin:8px 0; font-size:34px; }
+    h2 { margin:0 0 12px; }
+    p { color:#b7bdc8; line-height:1.45; }
+    .tabs { display:flex; gap:8px; margin:18px 0; position:sticky; top:0; padding:10px 0; background:#0f1115; z-index:2; }
+    .tab { flex:1; border:1px solid #303642; background:#171b22; color:#cbd1da; padding:11px; border-radius:12px; font-weight:700; }
+    .tab.active { background:#f0f1f3; color:#111; }
+    .panel,.result { background:#171b22; border:1px solid #272d37; border-radius:20px; padding:16px; margin-top:14px; }
+    .formgrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    label { display:block; color:#d9dde4; font-size:14px; }
+    input, select, textarea { width:100%; margin-top:7px; padding:12px; border-radius:12px; background:#0f1115; color:#fff; border:1px solid #343b48; }
+    textarea { min-height:86px; resize:vertical; }
+    input[type=range] { padding:0; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0; }
+    .goal { border:1px solid #303642; background:#11151b; color:#fff; padding:15px; border-radius:16px; text-align:left; }
+    .goal strong,.goal span { display:block; }
+    .goal span { margin-top:5px; color:#9da6b3; font-size:12px; }
+    .goal.selected { border-color:#fff; }
+    .checks { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .chip { border:1px solid #343b48; padding:9px 11px; border-radius:999px; color:#cdd3dc; font-size:13px; }
+    .chip input { width:auto; margin:0 6px 0 0; }
+    .primary,.secondary { width:100%; padding:15px; margin-top:12px; border:0; border-radius:14px; font-weight:800; }
+    .secondary { background:#252b34; color:#fff; border:1px solid #3a424f; }
+    .status { margin-top:10px; font-size:13px; color:#9da6b3; }
+    .resultHeader,.block { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .block { padding:13px 0; border-top:1px solid #2a303a; }
+    .block small { display:block; color:#9da6b3; margin-top:3px; }
+    .warning,.profileNote { padding:12px; border-radius:12px; }
+    .warning { background:#2b2215; }
+    .profileNote { background:#172432; }
+    .hidden { display:none; }
+    @media(max-width:600px){ .grid,.formgrid{grid-template-columns:1fr;} h1{font-size:30px;} .tabs{position:static;} }
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">M17 TRAINING SYSTEM · v0.2</div>
+  <h1>Профиль → цель → программа</h1>
+  <p>Заполните базовые данные. Они сохраняются как профиль клиента и используются при формировании структуры подготовки.</p>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="profile">1. Профиль</button>
+    <button class="tab" data-tab="goal">2. Цель</button>
+    <button class="tab" data-tab="plan">3. План</button>
+  </div>
+
+  <section id="profileTab" class="panel tabPage">
+    <h2>Анкета клиента</h2>
+    <div class="formgrid">
+      <label>Имя<input id="name" placeholder="Имя клиента" /></label>
+      <label>Пол<select id="sex"><option value="not_specified">Не указан</option><option value="male">Мужчина</option><option value="female">Женщина</option><option value="other">Другое</option></select></label>
+      <label>Возраст<input id="age" type="number" min="14" max="90" value="35" /></label>
+      <label>Стаж тренировок, лет<input id="experience" type="number" min="0" max="60" step="0.5" value="1" /></label>
+      <label>Рост, см<input id="height" type="number" min="120" max="230" placeholder="180" /></label>
+      <label>Вес, кг<input id="weight" type="number" min="35" max="300" step="0.1" placeholder="80" /></label>
+    </div>
+    <label style="margin-top:14px">Оборудование / доступ
+      <div class="checks" id="equipmentChecks"></div>
+    </label>
+    <label style="margin-top:14px">Ограничения / что нужно учесть<textarea id="limitations" placeholder="Необязательно. Например: движения, которые временно нельзя выполнять, или ограничения по расписанию."></textarea></label>
+    <label style="margin-top:14px">Комментарий тренеру<textarea id="notes" placeholder="Предпочтения, соревнования, особенности графика и т. п."></textarea></label>
+    <button id="toGoal" class="primary">Далее: выбрать цель</button>
+  </section>
+
+  <section id="goalTab" class="panel tabPage hidden">
+    <h2>Основная цель</h2>
+    <section id="goals" class="grid"></section>
+    <label>Уровень
+      <select id="level"><option value="beginner">Начинающий</option><option value="intermediate" selected>Средний</option><option value="advanced">Продвинутый</option><option value="competitive">Соревновательный</option></select>
+    </label>
+    <label>Дней в неделю <b id="daysVal">5</b><input id="days" type="range" min="2" max="7" value="5" /></label>
+    <label>Часов в неделю <b id="hoursVal">8</b><input id="hours" type="range" min="2" max="30" value="8" /></label>
+    <label id="weeksWrap">Недель до старта <b id="weeksVal">24</b><input id="weeks" type="range" min="1" max="104" value="24" /></label>
+    <button id="saveProfile" class="primary">Сохранить профиль</button>
+    <div id="saveStatus" class="status"></div>
+    <button id="toPlan" class="secondary">Далее: программа</button>
+  </section>
+
+  <section id="planTab" class="tabPage hidden">
+    <section class="panel">
+      <h2>Структура подготовки</h2>
+      <p>На следующем этапе сюда добавятся конкретные тренировки, микроциклы и мезоциклы из вашей реальной тренерской базы.</p>
+      <button id="generate" class="primary">Собрать структуру</button>
+    </section>
+    <section id="result" class="result" style="display:none"></section>
+  </section>
+</main>
+<script>
+  const tg = window.Telegram?.WebApp;
+  tg?.ready?.(); tg?.expand?.();
+  const tgUser = tg?.initDataUnsafe?.user || {};
+  const localId = localStorage.getItem('m17_local_id') || ('local-' + Math.random().toString(36).slice(2));
+  localStorage.setItem('m17_local_id', localId);
+  const userId = tgUser.id ? String(tgUser.id) : localId;
+
+  const goals = [
+    ['ironman','Ironman 140.6','Длинная дистанция'],['half_ironman','Ironman 70.3','Половинная дистанция'],
+    ['olympic','Олимпийка','1.5 / 40 / 10 км'],['sprint','Спринт','Короткая триатлонная дистанция'],
+    ['crossfit','CrossFit','Functional Fitness'],['fat_loss','Похудение','Снижение жировой массы'],['muscle_gain','Набор мышц','Гипертрофия + сила']
+  ];
+  const equipment = ['Тренажёрный зал','Штанга/стойки','Гири/гантели','CrossFit box','Бассейн','Велосипед','Велостанок','Беговая дорожка','Гребля','SkiErg'];
+  let goal='ironman';
+
+  const $ = id => document.getElementById(id);
+  function showTab(name){
+    document.querySelectorAll('.tabPage').forEach(el=>el.classList.add('hidden'));
+    $(name+'Tab').classList.remove('hidden');
+    document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+  $('toGoal').onclick=()=>showTab('goal'); $('toPlan').onclick=()=>showTab('plan');
+
+  $('equipmentChecks').innerHTML=equipment.map((e,i)=>`<label class="chip"><input type="checkbox" value="${e}" id="eq${i}">${e}</label>`).join('');
+  function renderGoals(){
+    $('goals').innerHTML=goals.map(g=>`<button class="goal ${goal===g[0]?'selected':''}" data-goal="${g[0]}"><strong>${g[1]}</strong><span>${g[2]}</span></button>`).join('');
+    $('goals').querySelectorAll('button').forEach(b=>b.onclick=()=>{goal=b.dataset.goal; renderGoals(); updateWeeks();});
+  }
+  function updateWeeks(){ $('weeksWrap').style.display=['ironman','half_ironman','olympic','sprint','crossfit'].includes(goal)?'block':'none'; }
+  ['days','hours','weeks'].forEach(id=>$(id).oninput=e=>$(id+'Val').textContent=e.target.value);
+
+  function profilePayload(){
+    return {
+      telegram_user_id:userId, telegram_username:tgUser.username || null,
+      name:$('name').value.trim() || tgUser.first_name || 'Клиент', sex:$('sex').value,
+      age:+$('age').value, height_cm:$('height').value?+$('height').value:null, weight_kg:$('weight').value?+$('weight').value:null,
+      experience_years:+$('experience').value || 0, primary_goal:goal, level:$('level').value,
+      days_per_week:+$('days').value, hours_per_week:+$('hours').value,
+      weeks_to_event:['ironman','half_ironman','olympic','sprint','crossfit'].includes(goal)?+$('weeks').value:null,
+      equipment:[...document.querySelectorAll('#equipmentChecks input:checked')].map(x=>x.value),
+      limitations:$('limitations').value.trim() || null, notes:$('notes').value.trim() || null
+    };
+  }
+
+  async function saveProfile(){
+    const p=profilePayload(); localStorage.setItem('m17_profile',JSON.stringify(p));
+    $('saveStatus').textContent='Сохраняю…';
+    const res=await fetch('/clients/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    if(!res.ok){ $('saveStatus').textContent='Профиль сохранён на устройстве; серверная запись временно недоступна.'; return; }
+    $('saveStatus').textContent='Профиль сохранён.';
+  }
+  $('saveProfile').onclick=saveProfile;
+
+  async function loadProfile(){
+    let p=null;
+    try{ const res=await fetch('/clients/profile/'+encodeURIComponent(userId)); if(res.ok) p=await res.json(); }catch(e){}
+    if(!p){ try{ p=JSON.parse(localStorage.getItem('m17_profile')||'null'); }catch(e){} }
+    if(!p){ $('name').value=tgUser.first_name || ''; return; }
+    $('name').value=p.name||''; $('sex').value=p.sex||'not_specified'; $('age').value=p.age||35; $('experience').value=p.experience_years||0;
+    $('height').value=p.height_cm||''; $('weight').value=p.weight_kg||''; $('limitations').value=p.limitations||''; $('notes').value=p.notes||'';
+    goal=p.primary_goal||goal; $('level').value=p.level||'intermediate'; $('days').value=p.days_per_week||5; $('hours').value=p.hours_per_week||8; $('weeks').value=p.weeks_to_event||24;
+    $('daysVal').textContent=$('days').value; $('hoursVal').textContent=$('hours').value; $('weeksVal').textContent=$('weeks').value;
+    (p.equipment||[]).forEach(v=>{ const el=[...document.querySelectorAll('#equipmentChecks input')].find(x=>x.value===v); if(el) el.checked=true; });
+    renderGoals(); updateWeeks();
+  }
+
+  $('generate').onclick=async()=>{
+    const btn=$('generate'); btn.textContent='Собираю…';
+    try{
+      const pr=profilePayload();
+      const payload={goal:pr.primary_goal,level:pr.level,days_per_week:pr.days_per_week,hours_per_week:pr.hours_per_week,weeks_to_event:pr.weeks_to_event,age:pr.age,experience_years:pr.experience_years,limitations:pr.limitations};
+      const res=await fetch('/plans/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const p=await res.json(); const r=$('result'); r.style.display='block';
+      r.innerHTML=`<div class="resultHeader"><h2>Структура недели</h2><span>${p.phase}</span></div>`+p.blocks.map(b=>`<div class="block"><div><strong>${b.name}</strong><small>${b.note}</small></div><b>${b.sessions}×</b></div>`).join('')+(p.profile_note?`<p class="profileNote">${p.profile_note}</p>`:'')+(p.warning?`<p class="warning">${p.warning}</p>`:'');
+    }finally{btn.textContent='Собрать структуру';}
+  };
+
+  renderGoals(); updateWeeks(); loadProfile();
+</script>
+</body>
+</html>
